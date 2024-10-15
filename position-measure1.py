@@ -13,7 +13,7 @@ inDir = r"C:\Users\beale\Desktop\SharpCap Captures\2024-10-14\Sun4\pipp_20241014
 
 outFile = r"C:\Users\beale\Documents\astro\SunPos4.csv"
 
-header = "n,count,cx,cy,diam,dStd,area,meanVal,stdVal,mV2,sV2,rUL" # column headers for CSV file out
+header = "n,count,cx,cy,diam,dStd,area,meanVal,stdVal,mV2,sV2,rUD,rRL" # column headers for CSV file out
 EOL="\n"
 
 
@@ -21,7 +21,8 @@ def dist(p1, p2):
     dist = math.sqrt( math.pow(p1[0]-p2[0],2) + math.pow(p1[1]-p2[1],2) )
     return dist
 
-def split_contour(cnt):
+# return upper and lower half of contour
+def UL_contour(cnt):
     uhC = []
     lhC = []
     x, y, w, h = cv2.boundingRect(cnt)
@@ -35,6 +36,23 @@ def split_contour(cnt):
     uhC = np.array(uhC)
     lhC = np.array(lhC)
     return (uhC, lhC)
+
+# return left and right half of contour
+def RL_contour(cnt):
+    rhC = []
+    lhC = []
+    x, y, w, h = cv2.boundingRect(cnt)    
+    midX = (x + w//2)
+    for point in cnt:
+        if point[0][0] < midX:  # Keep points above the middle of the bounding box
+            lhC.append(point)
+        else:
+            rhC.append(point)
+
+    rhC = np.array(rhC)
+    lhC = np.array(lhC)
+    return (rhC, lhC)
+
 
 # =============================================
 # main program starts here
@@ -94,6 +112,9 @@ for pnum in range(810):
         #if (area < 100000): # not what we're looking for
             continue
 
+        #perimeter = cv2.arcLength(contour, True)
+        #print(perimeter)
+
         rSum = 0
         points = 0
         dList = []
@@ -117,20 +138,36 @@ for pnum in range(810):
         cv2.drawContours(mask, [scaled_contour], 0, 255, -1)
         mV2,sV2 = cv2.meanStdDev(imGray, mask=mask) # Calculate mean pixel value inside the contour
 
-        uh,lh = split_contour(scaled_contour)
+        uh,dh = UL_contour(scaled_contour)  # get upper and lower half contours
 
-        mask = np.zeros(imGray.shape, np.uint8)
-        cv2.drawContours(mask, [uh], 0, 255, -1)
-        mU = cv2.mean(imGray, mask=mask)[0] # Calculate mean pixel value inside the contour
+        mask1 = np.zeros(imGray.shape, np.uint8)
+        cv2.drawContours(mask1, [uh], 0, 255, -1)
+        mU = cv2.mean(imGray, mask=mask1)[0] # Calculate mean pixel value inside the contour
 
-        mask = np.zeros(imGray.shape, np.uint8)
-        cv2.drawContours(mask, [lh], 0, 255, -1)
-        mL = cv2.mean(imGray, mask=mask)[0] # Calculate mean pixel value inside the contour
-        ratioUL = mU/mL
+        mask2 = np.zeros(imGray.shape, np.uint8)
+        cv2.drawContours(mask2, [dh], 0, 255, -1)
+        mD = cv2.mean(imGray, mask=mask2)[0] # Calculate mean pixel value inside the contour
+        ratioUL = mU/mD  # upper/lower ratio of brightness
+
+        rh,lh = RL_contour(scaled_contour)  # get right and left-half contours
+
+        #p0 = cv2.arcLength(scaled_contour, True)
+        #p1 = cv2.arcLength(rh, True)
+        #p2 = cv2.arcLength(lh, True)
+        #print(p0,p1,p2)
+
+        mask3 = np.zeros(imGray.shape, np.uint8)
+        cv2.drawContours(mask3, [rh], 0, 255, -1)
+        mR = cv2.mean(imGray, mask=mask3)[0] # Calculate mean pixel value inside the contour
+
+        mask4 = np.zeros(imGray.shape, np.uint8)
+        cv2.drawContours(mask4, [lh], 0, 255, -1)
+        mL = cv2.mean(imGray, mask=mask4)[0] # Calculate mean pixel value inside the contour
+        ratioRL = mR/mL  # right/left ratio of brightness
 
 
-        s = (", %.3f,%.3f,%.3f,%.4f, %d, %.3f, %.3f, %.3f, %.3f, %.3f" % 
-             (cX,cY,diam,dStd, area, meanVal, stdVal, mV2, sV2, ratioUL))
+        s = (", %.3f,%.3f,%.3f,%.4f, %d, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f" % 
+             (cX,cY,diam,dStd, area, meanVal, stdVal, mV2, sV2, ratioUL, ratioRL))
         print(s,end="")
         fout.write(s)
         #cv2.drawContours(im, contours, -1, (0, 255, 0), 2)
