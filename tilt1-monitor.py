@@ -1,6 +1,6 @@
 # read tiltmeter (Arduino I/F to AD7747 cap meter)
 # Arduino code derived from github.com/jankop2/Arduino-AD7747
-# 29-Nov-2024 J.Beale
+# 30-Nov-2024 J.Beale
 
 import serial
 import time
@@ -20,7 +20,7 @@ def readDat(ser):
 # ---------------------------------------------------------
 # main program starts here
 
-VERSION = "TiltMeter 0.1 29-Nov-2024"
+VERSION = "TiltMeter 0.1 30-Nov-2024"
 now = datetime.now()
 tsLog = now.strftime("%Y%m%d_%H%M%S_tilt.csv")
 
@@ -90,4 +90,3 @@ with open(logfile, 'w') as of:
 
     except serial.SerialException as e:
         print(f"An error occurred: {e}")
-      
